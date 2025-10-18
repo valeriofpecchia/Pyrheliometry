@@ -1,0 +1,111 @@
+#include <Adafruit_MAX31865.h>
+#include <Wire.h>
+#include "HT_SSD1306Wire.h"
+
+//Display init
+#ifdef WIRELESS_STICK_V3
+static SSD1306Wire display(0x3c, 500000, 17, 18, GEOMETRY_64_32, RST_OLED);
+#else
+static SSD1306Wire display(0x3c, 500000, 17, 18, GEOMETRY_128_64, RST_OLED);
+#endif
+
+//Variable for graph
+const int MAX_POINTS = 100;   // ~100 punti visibili
+float tempHistory[MAX_POINTS];
+int dataIndex = 0;
+bool filled = false;
+
+unsigned long elapsedSeconds = 0;  // tempo totale
+
+// Function for map and float
+float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+// CS-DI-DO_CLK
+Adafruit_MAX31865 thermo = Adafruit_MAX31865(34, 35, 33, 36);
+// use hardware SPI, just pass in the CS pin
+
+// The value of the Rref resistor. Use 430.0 for PT100 and 4300.0 for PT1000
+#define RREF      430.0
+// The 'nominal' 0-degrees-C resistance of the sensor
+// 100.0 for PT100, 1000.0 for PT1000
+#define RNOMINAL  100.0
+
+
+void setup() {
+  Serial.begin(115200);
+  //Display setup
+  display.init();
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  display.setFont(ArialMT_Plain_10);
+  //Max setup
+  Serial.println("Adafruit MAX31865 PT100 Sensor Test!");
+  thermo.begin(MAX31865_2WIRE);  // set to 3WIRE or 4WIRE as necessary
+}
+
+
+void loop() {
+  //Temperature measurement and calculation
+  uint16_t rtd = thermo.readRTD();
+  float ratio = rtd;
+  ratio /= 32768;
+  float temperatureC = thermo.temperature(RNOMINAL,RREF);
+  Serial.println(thermo.temperature(RNOMINAL, RREF));
+  Serial.println();
+
+  // Update buffer for visualization
+  tempHistory[dataIndex] = temperatureC;
+  dataIndex = (dataIndex + 1) % MAX_POINTS;
+  if (dataIndex == 0) filled = true;
+  elapsedSeconds++;
+
+  // Range Calculation
+  int count = filled ? MAX_POINTS : dataIndex;
+  float tMin = tempHistory[0], tMax = tempHistory[0];
+  for (int i = 0; i < count; i++) {
+    tMin = min(tMin, tempHistory[i]);
+    tMax = max(tMax, tempHistory[i]);
+  }
+  if (tMin == tMax) { tMin -= 1; tMax += 1; }
+
+  display.clear();
+
+  // Set the actual temperature in the bottom left corner
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.drawString(0, 54, String(temperatureC, 1) + "°C");
+  // Right coordinate for Heltec WiFi kit 32 Display
+  int graphX0 = 30;     // Left margin
+  int graphY0 = 45;     // Graph baseline
+  int graphH  = 40;     // Graph height
+  int graphW  = 90;     // Graph width
+
+  // Axes
+  display.drawLine(graphX0, graphY0 - graphH, graphX0, graphY0);  // Y
+  display.drawLine(graphX0, graphY0, graphX0 + graphW, graphY0);  // X
+
+  // Only max on Y
+  int yTop = graphY0 - graphH;
+  display.drawLine(graphX0 - 3, yTop, graphX0, yTop);
+  display.setTextAlignment(TEXT_ALIGN_RIGHT);
+  display.drawString(graphX0 - 4, yTop - 4, String(tMax, 1));
+
+  // Time on bottom right corner
+  String timeStr = String(elapsedSeconds);
+  int xRight = 128; // right edge of the display
+  display.setTextAlignment(TEXT_ALIGN_RIGHT);
+  display.drawString(xRight, 54, timeStr + "s");
+
+  // Graph with auto-update
+  for (int i = 1; i < count; i++) {
+    int x1 = (int)mapFloat(i - 1, 0, count - 1, graphX0, graphX0 + graphW - 1);
+    int x2 = (int)mapFloat(i,     0, count - 1, graphX0, graphX0 + graphW - 1);
+    int y1 = graphY0 - (int)mapFloat(tempHistory[(dataIndex + i - 1) % count], tMin, tMax, 0, graphH);
+    int y2 = graphY0 - (int)mapFloat(tempHistory[(dataIndex + i) % count],     tMin, tMax, 0, graphH);
+    display.drawLine(x1, y1, x2, y2);
+  }
+
+  display.display();
+  delay(1000); //wait 1 sec for the next measurement
+}
