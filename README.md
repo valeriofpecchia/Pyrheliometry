@@ -5,7 +5,7 @@ It focuses on measuring solar irradiance at the Earth's surface using custom-bui
 
 ---
 
-## 📡 Project Overview
+## Project Overview
 The system consists of two main components:
 
 1. **Microcontroller firmware (Arduino sketches)**  
@@ -22,7 +22,7 @@ The system consists of two main components:
 
 ---
 
-## ⚙️ Hardware
+## Hardware
 - Heltec WiFi Kit 32 (V3) microcontroller  
 - MAX31865 temperature sensor amplifier (for PT100/PT1000)  
 - DS18B20 digital temperature sensor  
@@ -31,7 +31,7 @@ The system consists of two main components:
 
 ---
 
-## 🧠 How It Works
+## How It Works
 1. Upload the appropriate Arduino sketch to your Heltec board.  
 2. Connect the sensors and start data acquisition.  
 3. Run the `Serial_reading.ipynb` notebook to collect and visualize live data.  
