@@ -3,7 +3,7 @@
 This work was done for the "Museo degli Strumenti di Fisica" in collaboration with the University of Pisa.  
 The project focuses on measuring solar irradiance at the Earth's surface.
 
-The two Arduino sketches are designed to be installed on the microcontroller.  
+The two `.ino` sketches are designed to be installed on the microcontroller.  
 They perform temperature measurements, serial data transmission, and display a live plot on the integrated screen of the Heltec WiFi Kit 32 (V3).
 
 The two `.ipynb` notebooks are used to properly visualize the data, save them as `.txt` files, and perform further analysis.  
